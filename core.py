@@ -35,3 +35,17 @@ class ACUX(object):
         req = self.__post_request(endpoint="/api/v1/targets",data={"address":target,"description":"xxxx","criticality":"10"})
         return self.__json_return(req.text)
 
+    def add_and_start(self,target=None):
+        target_id = self.add_target(target=target)['target_id']
+        payload = {
+            "target_id":str(target_id),
+            "profile_id":"11111111-1111-1111-1111-111111111111",
+            "schedule":    
+                {"disable":False,
+                "start_date":None,
+                "time_sensitive":False
+                }
+            }
+
+        req = self.__post_request(endpoint="/api/v1/scans",data=payload)
+        return self.__json_return(req.text)
