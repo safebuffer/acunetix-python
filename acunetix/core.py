@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 import requests
+
 requests.packages.urllib3.disable_warnings()
 import json
-
-
-class AXException(Exception):
-    HTTP_ERROR = "HTTP Error "
-    AUTH_ERROR = "Wrong API Key"
-
 
 
 class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=20):
         self.apikey = api
-        self.host = str("{}{}".format("https://" if "https://" not in host else "",host))
+        self.host = str(
+            "{}{}".format("https://" if "https://" not in host else "", host)
+        )
         self.timeout = timeout
         self.headers = {
                 "X-Auth":self.apikey,
