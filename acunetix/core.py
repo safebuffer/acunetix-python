@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 import requests
-import constants
 import json
-
-from .axeception import AXException
-
 requests.packages.urllib3.disable_warnings()
 
+from .axeception import AXException
+from .constants import *
 
 class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=20):
@@ -20,6 +18,9 @@ class Acunetix(object):
             "content-type": "application/json",
             "User-Agent": "Acunetix",
         }
+        self.authenticated = self.__is_connected()
+        if not self.authenticated:
+            raise AXException("AUTH_ERROR", "Wrong API Key !")
 
     def __json_return(self, data):
         try:
@@ -38,39 +39,46 @@ class Acunetix(object):
                 data=json.dumps(data),
                 verify=False,
             )
+            if request.status_code == 403:
+                raise AXException("HTTP_ERROR", f"HTTP ERROR OCCURED: {request.text}")
             return self.__json_return(request.text)
         except Exception as e:
-            raise AXException(HTTP_ERROR, f"HTTP ERROR OCCURED: {e}")
+            raise AXException("HTTP_ERROR", f"HTTP ERROR OCCURED: {e}")
+
+    def __is_connected(self):
+        return False if 'Unauthorized' in str(self.info()) else True
 
     def info(self):
         return self.__send_request(method="get", endpoint="/api/v1/info")
 
     def targets(self):
         return self.__send_request(
-            method="get", endpoint="/api/v1/targets?pagination=50"
+            method="get", endpoint=f"{API_TARGET}?pagination=50"
         )
 
     def add_target(self, target="", criticality="normal"):
-        if criticality not in self.target_criticality_allowed:
-            raise AXException(NOT_ALLOWED_CRITICYLITY_PROFILE, "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))
+        if criticality not in target_criticality_allowed:
+            raise AXException("NOT_ALLOWED_CRITICYLITY_PROFILE", "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))
+        
+        
         target_address = (
-            target if "http://" or "https://" in target else "http://{}".format(target)
+            target if "http://" in target or "https://" in target else "http://{}".format(target)
         )
         data = {
-            "address": target_address,
+            "address": str(target_address),
             "description": "Sent from Acunetix-Python",
             "criticality": target_criticality_list[criticality],
         }
-        return self.__send_request(method="post", endpoint="/api/v1/targets", data=data)
+        return self.__send_request(method="post", endpoint=API_TARGET, data=data)
 
     def delete_target(self, target_id):
         return self.__send_request(
-            method="delete", endpoint="/api/v1/targets/{}".format(target_id)
+            method="delete", endpoint=f"{API_TARGET}/{target_id}"
         )
 
     def delete_all_targets(self):
-        targets = self.targets()
         while True:
+            targets = self.targets()
             if len(targets["targets"]):
                 for target in targets["targets"]:
                     self.delete_target(target["target_id"])
@@ -78,11 +86,11 @@ class Acunetix(object):
                 break
     
     def scans(self):
-        return self.__send_request(method="get", endpoint="/api/v1/scans")
+        return self.__send_request(method="get", endpoint=API_SCAN)
 
     def start_scan(self,address=None,target_id=None,scan_profile="full_scan"):
         if scan_profile not in scan_profiles_allowed:
-            raise AXException(NOT_ALLOWED_SCAN_PROFILE, "Scan Profile not found allowed values {}".format(str(list(scan_profiles_allowed))))
+            raise AXException("NOT_ALLOWED_SCAN_PROFILE", "Scan Profile not found allowed values {}".format(str(list(scan_profiles_allowed))))
         if address and not target_id:
             target_id = self.add_target(target=address)['target_id']
         scan_payload = {
@@ -91,4 +99,4 @@ class Acunetix(object):
             "schedule": {"disable":False, "start_date":None, "time_sensitive":False }
         }
 
-        return self.__send_request(method="post", endpoint="/api/v1/scans" , data=scan_payload)
+        return self.__send_request(method="post", endpoint=API_SCAN , data=scan_payload)

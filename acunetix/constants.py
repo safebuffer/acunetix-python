@@ -1,3 +1,8 @@
+API_BASE = "/api/v1/"
+
+API_SCAN = API_BASE + "scans"
+API_TARGET = API_BASE + "targets"
+
 target_criticality_list = {
     "critical":"10",
     "high":"20",
