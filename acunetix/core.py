@@ -52,7 +52,7 @@ class Acunetix(object):
         )
 
     def add_target(self,target="", criticality="normal"):
-        if criticality not in self.target_criticality_allowed:
+        if criticality not in target_criticality_allowed:
             pass
         target_address = target if 'http://' or 'https://' in target else "http://{}".format(target)
         data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality": target_criticality_list[criticality]}
@@ -63,9 +63,6 @@ class Acunetix(object):
             method="delete", endpoint="/api/v1/targets/{}".format(target_id)
         )
 
-    def scans(self):
-        return self.__send_request(method="get", endpoint="/api/v1/scans")
-
     def delete_all_targets(self):
         targets = self.targets()
         if len(targets["targets"]):
@@ -73,3 +70,21 @@ class Acunetix(object):
                 self.delete_target(target["target_id"])
         else:
             break
+    
+    def scans(self):
+        return self.__send_request(method="get", endpoint="/api/v1/scans")
+
+    def start_scan(self,address=None,target_id=None,scan_profile="full_scan"):
+        if scan_profile not in scan_profiles_allowed:
+            pass
+
+        if address and not target_id:
+            target_id = self.add_target(target=address)['target_id']
+
+        scan_payload = {
+            "target_id":str(target_id),
+            "profile_id":scan_profiles_list[scan_profile],
+            "schedule": {"disable":False, "start_date":None, "time_sensitive":False }
+        }
+        
+        return self.__send_request(method="post", endpoint="/api/v1/scans" , data=scan_payload)
