@@ -4,6 +4,7 @@ import requests
 requests.packages.urllib3.disable_warnings()
 import json
 
+from .constants import *
 
 class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=20):
@@ -17,7 +18,9 @@ class Acunetix(object):
                 "content-type": "application/json",
                 "User-Agent": "Acunetix"
             }
-    
+        self.target_criticality_allowed = target_criticality_allowed
+
+        
     def __json_return(self,data):
         try:
             return json.loads(data)
@@ -39,9 +42,11 @@ class Acunetix(object):
     def targets(self):
         return self.__send_request(method="get", endpoint="/api/v1/targets?pagination=50")
 
-    def add_target(self,target):
+    def add_target(self,target="", criticality="normal"):
+        if criticality not in self.target_criticality_allowed:
+            pass
         target_address = target if 'http://' or 'https://' in target else "http://{}".format(target)
-        data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality":"10"}
+        data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality": target_criticality_list[criticality]}
         return self.__send_request(method="post", endpoint="/api/v1/targets" , data=data)
 
     def delete_target(self, target_id):
