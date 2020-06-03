@@ -5,7 +5,15 @@ import requests
 requests.packages.urllib3.disable_warnings()
 import json
 
-class ACUX(object):
+
+class AXException(Exception):
+    HTTP_ERROR = "HTTP Error "
+    AUTH_ERROR = "Wrong API Key"
+
+
+
+
+class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=10):
         self.apikey = api
         self.host = str("{}{}".format("https://" if "https://" not in host else "",host))
