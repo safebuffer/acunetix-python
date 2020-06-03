@@ -3,6 +3,8 @@ import requests
 import constants
 import json
 
+from .axeception import AXException
+
 requests.packages.urllib3.disable_warnings()
 
 
@@ -38,8 +40,8 @@ class Acunetix(object):
                 verify=False,
             )
             return self.__json_return(request.text)
-        except:
-            pass
+        except Exception as e:
+            raise AXException(HTTP_ERROR, f"HTTP ERROR OCCURED: {e}")
 
     def info(self):
         return self.__send_request(method="get", endpoint="/api/v1/info")
