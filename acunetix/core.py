@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from requests import get as http_get_request
-from requests import post as http_post_request
 import requests
 requests.packages.urllib3.disable_warnings()
 import json
@@ -12,48 +10,53 @@ class AXException(Exception):
 
 
 
-
 class Acunetix(object):
-    def __init__(self, host=None, api=None, timeout=10):
+    def __init__(self, host=None, api=None, timeout=20):
         self.apikey = api
         self.host = str("{}{}".format("https://" if "https://" not in host else "",host))
         self.timeout = timeout
-        
-    def __headers(self):
-        return {"X-Auth":self.apikey,"content-type": "application/json"} if self.apikey else None
-
-    def __get_request(self,endpoint=None):
-        return http_get_request(str("{}{}".format(self.host, endpoint if endpoint else "/")),headers=self.__headers(),timeout=self.timeout,verify=False)
+        self.headers = {
+                "X-Auth":self.apikey,
+                "content-type": "application/json",
+                "User-Agent": "Acunetix"
+            }
     
-    def __post_request(self,endpoint=None,data=None):
-        return http_post_request(str("{}{}".format(self.host, endpoint if endpoint else "/")),data=json.dumps(data),headers=self.__headers(),timeout=self.timeout,verify=False)
-
     def __json_return(self,data):
-        return json.loads(data)
-
-    def scans(self):
-        req = self.__get_request(endpoint="/api/v1/scans")
-        return self.__json_return(req.text)
+        try:
+            return json.loads(data)
+        except:
+            pass
+        
+    def __send_request(method="get", endpoint="" , data=None):
+        request_call = getattr(requests, method)
+        url = str("{}{}".format(self.host, endpoint if endpoint else "/"))
+        try:
+            request = request_call(url, headers=self.headers, timeout=self.timeout, data=json.dumps(data), verify=False)
+            return self.__json_return(request.text)
+        except:
+            pass
 
     def info(self):
-        req = self.__get_request(endpoint="/api/v1/info")
-        return self.__json_return(req.text)
+        return self.__send_request(method="get", endpoint="/api/v1/info")
 
-    def add_target(self,target=None):
-        req = self.__post_request(endpoint="/api/v1/targets",data={"address":target,"description":"xxxx","criticality":"10"})
-        return self.__json_return(req.text)
+    def targets(self):
+        return self.__send_request(method="get", endpoint="/api/v1/targets?pagination=50")
 
-    def add_and_start(self,target=None):
-        target_id = self.add_target(target=target)['target_id']
-        payload = {
-            "target_id":str(target_id),
-            "profile_id":"11111111-1111-1111-1111-111111111111",
-            "schedule":    
-                {"disable":False,
-                "start_date":None,
-                "time_sensitive":False
-                }
-            }
+    def add_target(self,target):
+        target_address = target if 'http://' or 'https://' in target else "http://{}".format(target)
+        data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality":"10"}
+        return self.__send_request(method="post", endpoint="/api/v1/targets" , data=data)
 
-        req = self.__post_request(endpoint="/api/v1/scans",data=payload)
-        return self.__json_return(req.text)
+    def delete_target(self, target_id):
+        return self.__send_request(method="delete", endpoint="/api/v1/targets/{}".format(target_id))
+
+    def scans(self):
+        return self.__send_request(method="get", endpoint="/api/v1/scans")
+
+    def delete_all_targets(self):
+        targets = self.targets()
+        if len(targets['targets']):
+            for target in targets['targets']:
+                self.delete_target(i['target_id'])
+        else:
+            break
