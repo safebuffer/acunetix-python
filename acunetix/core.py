@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import requests
-from exception.axeception import AXException
-
-requests.packages.urllib3.disable_warnings()
+import constants
 import json
 
-from .constants import *
+requests.packages.urllib3.disable_warnings()
+
 
 class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=20):
@@ -15,14 +14,12 @@ class Acunetix(object):
         )
         self.timeout = timeout
         self.headers = {
-                "X-Auth":self.apikey,
-                "content-type": "application/json",
-                "User-Agent": "Acunetix"
-            }
-        self.target_criticality_allowed = target_criticality_allowed
+            "X-Auth": self.apikey,
+            "content-type": "application/json",
+            "User-Agent": "Acunetix",
+        }
 
-        
-    def __json_return(self,data):
+    def __json_return(self, data):
         try:
             return json.loads(data)
         except:
@@ -51,12 +48,18 @@ class Acunetix(object):
             method="get", endpoint="/api/v1/targets?pagination=50"
         )
 
-    def add_target(self,target="", criticality="normal"):
-        if criticality not in target_criticality_allowed:
-            pass
-        target_address = target if 'http://' or 'https://' in target else "http://{}".format(target)
-        data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality": target_criticality_list[criticality]}
-        return self.__send_request(method="post", endpoint="/api/v1/targets" , data=data)
+    def add_target(self, target="", criticality="normal"):
+        if criticality not in self.target_criticality_allowed:
+            raise AXException(NOT_ALLOWED_CRITICYLITY_PROFILE, "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))
+        target_address = (
+            target if "http://" or "https://" in target else "http://{}".format(target)
+        )
+        data = {
+            "address": target_address,
+            "description": "Sent from Acunetix-Python",
+            "criticality": target_criticality_list[criticality],
+        }
+        return self.__send_request(method="post", endpoint="/api/v1/targets", data=data)
 
     def delete_target(self, target_id):
         return self.__send_request(
@@ -65,26 +68,25 @@ class Acunetix(object):
 
     def delete_all_targets(self):
         targets = self.targets()
-        if len(targets["targets"]):
-            for target in targets["targets"]:
-                self.delete_target(target["target_id"])
-        else:
-            break
+        while True:
+            if len(targets["targets"]):
+                for target in targets["targets"]:
+                    self.delete_target(target["target_id"])
+            else:
+                break
     
     def scans(self):
         return self.__send_request(method="get", endpoint="/api/v1/scans")
 
     def start_scan(self,address=None,target_id=None,scan_profile="full_scan"):
         if scan_profile not in scan_profiles_allowed:
-            pass
-
+            raise AXException(NOT_ALLOWED_SCAN_PROFILE, "Scan Profile not found allowed values {}".format(str(list(scan_profiles_allowed))))
         if address and not target_id:
             target_id = self.add_target(target=address)['target_id']
-
         scan_payload = {
             "target_id":str(target_id),
             "profile_id":scan_profiles_list[scan_profile],
             "schedule": {"disable":False, "start_date":None, "time_sensitive":False }
         }
-        
+
         return self.__send_request(method="post", endpoint="/api/v1/scans" , data=scan_payload)
