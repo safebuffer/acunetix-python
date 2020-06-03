@@ -24,8 +24,8 @@ class Acunetix(object):
     def __json_return(self, data):
         try:
             return json.loads(data)
-        except:
-            pass
+        except Exception as e:
+            raise AXException(JSON_PARSING_ERROR, f"Json Parsing has occured: {e}")
 
     def __send_request(self, method="get", endpoint="", data=None):
         request_call = getattr(requests, method)
@@ -52,7 +52,12 @@ class Acunetix(object):
 
     def add_target(self, target="", criticality="normal"):
         if criticality not in self.target_criticality_allowed:
-            raise AXException(NOT_ALLOWED_CRITICYLITY_PROFILE, "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))
+            raise AXException(
+                NOT_ALLOWED_CRITICYLITY_PROFILE,
+                "Criticallity not found allowed values {}".format(
+                    str(list(target_criticality_allowed))
+                ),
+            )
         target_address = (
             target if "http://" or "https://" in target else "http://{}".format(target)
         )
@@ -76,19 +81,26 @@ class Acunetix(object):
                     self.delete_target(target["target_id"])
             else:
                 break
-    
+
     def scans(self):
         return self.__send_request(method="get", endpoint="/api/v1/scans")
 
-    def start_scan(self,address=None,target_id=None,scan_profile="full_scan"):
+    def start_scan(self, address=None, target_id=None, scan_profile="full_scan"):
         if scan_profile not in scan_profiles_allowed:
-            raise AXException(NOT_ALLOWED_SCAN_PROFILE, "Scan Profile not found allowed values {}".format(str(list(scan_profiles_allowed))))
+            raise AXException(
+                NOT_ALLOWED_SCAN_PROFILE,
+                "Scan Profile not found allowed values {}".format(
+                    str(list(scan_profiles_allowed))
+                ),
+            )
         if address and not target_id:
-            target_id = self.add_target(target=address)['target_id']
+            target_id = self.add_target(target=address)["target_id"]
         scan_payload = {
-            "target_id":str(target_id),
-            "profile_id":scan_profiles_list[scan_profile],
-            "schedule": {"disable":False, "start_date":None, "time_sensitive":False }
+            "target_id": str(target_id),
+            "profile_id": scan_profiles_list[scan_profile],
+            "schedule": {"disable": False, "start_date": None, "time_sensitive": False},
         }
 
-        return self.__send_request(method="post", endpoint="/api/v1/scans" , data=scan_payload)
+        return self.__send_request(
+            method="post", endpoint="/api/v1/scans", data=scan_payload
+        )
