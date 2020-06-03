@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import requests
-from exception.axeception import AXException
-
-requests.packages.urllib3.disable_warnings()
+import constants
 import json
 
-from .constants import *
+requests.packages.urllib3.disable_warnings()
+
 
 class Acunetix(object):
     def __init__(self, host=None, api=None, timeout=20):
@@ -15,14 +14,13 @@ class Acunetix(object):
         )
         self.timeout = timeout
         self.headers = {
-                "X-Auth":self.apikey,
-                "content-type": "application/json",
-                "User-Agent": "Acunetix"
-            }
+            "X-Auth": self.apikey,
+            "content-type": "application/json",
+            "User-Agent": "Acunetix",
+        }
         self.target_criticality_allowed = target_criticality_allowed
 
-        
-    def __json_return(self,data):
+    def __json_return(self, data):
         try:
             return json.loads(data)
         except:
@@ -51,12 +49,18 @@ class Acunetix(object):
             method="get", endpoint="/api/v1/targets?pagination=50"
         )
 
-    def add_target(self,target="", criticality="normal"):
+    def add_target(self, target="", criticality="normal"):
         if criticality not in self.target_criticality_allowed:
-            pass
-        target_address = target if 'http://' or 'https://' in target else "http://{}".format(target)
-        data = {"address":target_address, "description":"Sent from Acunetix-Python","criticality": target_criticality_list[criticality]}
-        return self.__send_request(method="post", endpoint="/api/v1/targets" , data=data)
+            raise AXException(NOT_ALLOWED_CRITICYLITY_PROFILE, "Criticallity not found")
+        target_address = (
+            target if "http://" or "https://" in target else "http://{}".format(target)
+        )
+        data = {
+            "address": target_address,
+            "description": "Sent from Acunetix-Python",
+            "criticality": target_criticality_list[criticality],
+        }
+        return self.__send_request(method="post", endpoint="/api/v1/targets", data=data)
 
     def delete_target(self, target_id):
         return self.__send_request(
