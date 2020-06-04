@@ -18,4 +18,3 @@ server = Acunetix(host="", api="")
 
 for domain in HOSTS:
     f = server.start_scan(address=domain)
-    print(f)

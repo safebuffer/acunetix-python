@@ -26,7 +26,7 @@ class Acunetix(object):
         try:
             return json.loads(data)
         except Exception as e:
-            raise AXException(JSON_PARSING_ERROR, f"Json Parsing has occured: {e}")
+            raise AXException("JSON_PARSING_ERROR", f"Json Parsing has occured: {e}")
 
     def __send_request(self, method="get", endpoint="", data=None):
         request_call = getattr(requests, method)
@@ -58,9 +58,7 @@ class Acunetix(object):
 
     def add_target(self, target="", criticality="normal"):
         if criticality not in target_criticality_allowed:
-            raise AXException("NOT_ALLOWED_CRITICYLITY_PROFILE", "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))
-        
-        
+            raise AXException("NOT_ALLOWED_CRITICYLITY_PROFILE", "Criticallity not found allowed values {}".format(str(list(target_criticality_allowed))))        
         target_address = (
             target if "http://" in target or "https://" in target else "http://{}".format(target)
         )
@@ -69,12 +67,17 @@ class Acunetix(object):
             "description": "Sent from Acunetix-Python",
             "criticality": target_criticality_list[criticality],
         }
+        print(f"adding target {target_address} ")
         return self.__send_request(method="post", endpoint=API_TARGET, data=data)
 
     def delete_target(self, target_id):
-        return self.__send_request(
-            method="delete", endpoint=f"{API_TARGET}/{target_id}"
-        )
+        print(f"deleting {target_id}")
+        try:
+            return self.__send_request(
+                method="delete", endpoint=f"{API_TARGET}/{target_id}"
+            )
+        except:
+            pass
 
     def delete_all_targets(self):
         while True:
@@ -98,5 +101,5 @@ class Acunetix(object):
             "profile_id": scan_profiles_list[scan_profile],
             "schedule": {"disable": False, "start_date": None, "time_sensitive": False},
         }
-
+        print(f"Scanning {target_id} , {scan_profile}")
         return self.__send_request(method="post", endpoint=API_SCAN , data=scan_payload)
